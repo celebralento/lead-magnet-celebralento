@@ -1,7 +1,12 @@
 {
   "name": "lead-magnet-celebra-lento",
   "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
   "dependencies": {
-    "@google/genai": "^0.1.1"
+    "@google/genai": "0.1.1"
   }
 }
