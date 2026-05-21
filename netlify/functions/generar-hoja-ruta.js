@@ -1,3 +1,45 @@
+async function llamarGemini(url, body, maxIntentos = 3) {
+
+  for (let intento = 1; intento <= maxIntentos; intento++) {
+
+    const respuesta = await fetch(url,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (respuesta.ok){
+      return respuesta;
+    }
+
+    const errorTexto =
+    await respuesta.text();
+
+    if (
+      respuesta.status===429 &&
+      intento < maxIntentos
+    ){
+
+      console.log(
+        `Intento ${intento}: demasiato traffico`
+      );
+
+      await new Promise(
+        r=>setTimeout(r,5000)
+      );
+
+      continue;
+    }
+
+    throw new Error(
+      `Google ${respuesta.status}: ${errorTexto}`
+    );
+
+  }
+
+}
 exports.handler = async (event, context) => {
   // Evitamos llamadas que no sean POST
   if (event.httpMethod !== "POST") {
@@ -31,15 +73,23 @@ exports.handler = async (event, context) => {
     `;
 
     // URL oficial y directa de la API de Google Gemini (usando el modelo estable)
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     // Petición nativa directa
-    const respuestaApi = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptSistema }] }]
-      })
-    });
+    const respuestaApi =
+await llamarGemini(
+   url,
+   {
+      contents:[
+         {
+            parts:[
+               {
+                 text:promptSistema
+               }
+            ]
+         }
+      ]
+   }
+);
 
     if (!respuestaApi.ok) {
       const errorTexto = await respuestaApi.text();
