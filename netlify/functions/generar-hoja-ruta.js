@@ -111,6 +111,9 @@ Conexión profunda:
 agrega preguntas íntimas
 
 Respuesta clara y estructurada
+- PROHIBIDO usar formato Markdown (no uses asteriscos ** para las negritas ni guiones para las listas).
+- Si quieres resaltar un título o una palabra en negrita, usa etiquetas HTML reales como <strong>texto</strong> o <b>texto</b>.
+- Para los saltos de línea, usa la etiqueta <br>.
 `;
 
     const modelos=[
