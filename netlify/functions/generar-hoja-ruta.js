@@ -35,7 +35,7 @@ exports.handler = async (event, context) => {
 
     // 4. Hacemos la llamada real al modelo rápido y eficiente
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: promptSistema,
     });
 
