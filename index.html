@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celebra Lento - Diseñador de Encuentros Intencionales</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: 'Georgia', serif; }
+    </style>
+</head>
+<body class="bg-[#FAF8F5] text-[#3E362E] min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-2xl w-full bg-white rounded-xl shadow-sm border border-[#EAE3D2] p-8 my-8">
+        <h1 class="text-3xl text-center text-[#8C6239] font-normal mb-2">Celebra Lento</h1>
+        <p class="text-center text-sm text-[#7A6F62] italic mb-8">Diseña tu próximo encuentro en casa sin perder tu paz mental.</p>
+
+        <form id="formulario-encuentro" class="space-y-6">
+            
+            <div>
+                <label class="block text-sm font-medium text-[#5C5246] mb-2">¿Cuántos invitados vienen?</label>
+                <select id="invitados" class="w-full bg-[#FCFBF9] border border-[#EAE3D2] rounded-md p-3 text-sm focus:outline-none focus:border-[#8C6239]">
+                    <option value="Encuentro íntimo (2-4 personas)">Encuentro íntimo (2-4 personas)</option>
+                    <option value="Grupo pequeño (5-8 personas)">Grupo pequeño (5-8 personas)</option>
+                    <option value="Grupo mediano (9-12 personas)">Grupo mediano (9-12 personas)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-[#5C5246] mb-2">¿Qué tipo de energía buscas generar?</label>
+                <select id="tipoEncuentro" class="w-full bg-[#FCFBF9] border border-[#EAE3D2] rounded-md p-3 text-sm focus:outline-none focus:border-[#8C6239]">
+                    <option value="Conexión profunda (conversaciones íntimas para arreglar el mundo)">Conexión profunda (para conversar de verdad)</option>
+                    <option value="Desconexión y risas (relajarse después del trabajo)">Desconexión y risas (ligero y divertido)</option>
+                    <option value="Celebración de un hito (cumpleaños o momento especial)">Celebración de un hito especial</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-[#5C5246] mb-2">¿Qué estilo de comida imaginas?</label>
+                <select id="tipoComida" class="w-full bg-[#FCFBF9] border border-[#EAE3D2] rounded-md p-3 text-sm focus:outline-none focus:border-[#8C6239]">
+                    <option value="Picada / Tapeo (comida al centro para compartir con las manos)">Picada / Tapeo al centro (fácil)</option>
+                    <option value="Merienda / Mate / Café con algo dulce">Merienda / Mate / Café</option>
+                    <option value="Cena o Almuerzo formal sentado">Cena o Almuerzo formal</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-[#5C5246] mb-1">¿Cómo está tu nivel de energía física hoy?</label>
+                <p class="text-xs text-[#9A8E7F] mb-2">Sé honesta: 1 es "estoy agotada", 5 es "tengo ganas de producir".</p>
+                <input type="range" id="energiaHost" min="1" max="5" value="3" class="w-full accent-[#8C6239]">
+                <div class="flex justify-between text-xs text-[#9A8E7F] px-1 mt-1">
+                    <span>Agotada (1)</span>
+                    <span>Normal (3)</span>
+                    <span>Con energía (5)</span>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-[#8C6239] hover:bg-[#734F2C] text-white font-medium py-3 px-4 rounded-md transition-colors text-sm tracking-wide mt-4">
+                Generar mi Hoja de Ruta
+            </button>
+        </form>
+
+        <div id="cargando" class="hidden text-center py-8 text-[#7A6F62] italic text-sm">
+            Tejiendo tu experiencia lenta... un momento.
+        </div>
+
+        <div id="resultado-container" class="hidden mt-8 pt-8 border-t border-[#EAE3D2]">
+            <h2 class="text-xl text-[#8C6239] mb-4">Tu Hoja de Ruta Personalizada</h2>
+            <div id="resultado-texto" class="prose max-w-none text-sm text-[#5C5246] whitespace-pre-line leading-relaxed">
+                </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.getElementById('formulario-encuentro').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Elementos de la interfaz
+            const cargando = document.getElementById('cargando');
+            const resultadoContainer = document.getElementById('resultado-container');
+            const resultadoTexto = document.getElementById('resultado-texto');
+            
+            // Mostrar carga y ocultar resultado anterior
+            cargando.classList.remove('hidden');
+            resultadoContainer.classList.add('hidden');
+
+            // Capturar datos del formulario
+            const datos = {
+                invitados: document.getElementById('invitados').value,
+                tipoEncuentro: document.getElementById('tipoEncuentro').value,
+                tipoComida: document.getElementById('tipoComida').value,
+                energiaHost: document.getElementById('energiaHost').value
+            };
+
+            try {
+                // Llamamos a nuestra Serverless Function de Netlify de forma segura
+                const respuesta = await fetch('/.netlify/functions/generar-hoja-ruta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+
+                const data = await respuesta.json();
+                
+                if (data.resultado) {
+                    // Mostramos el resultado que nos dio Gemini
+                    resultadoTexto.textContent = data.resultado;
+                    resultadoContainer.classList.remove('hidden');
+                } else {
+                    resultadoTexto.textContent = "Hubo un problema al generar la respuesta.";
+                    resultadoContainer.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                resultadoTexto.textContent = "Error de conexión con el servidor.";
+                resultadoContainer.classList.remove('hidden');
+            } finally {
+                cargando.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
