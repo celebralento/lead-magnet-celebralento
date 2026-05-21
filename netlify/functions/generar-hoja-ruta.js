@@ -1,5 +1,3 @@
-const { GoogleGenAI } = require("@google/genai");
-
 exports.handler = async (event, context) => {
   // Evitamos llamadas que no sean POST
   if (event.httpMethod !== "POST") {
@@ -10,8 +8,10 @@ exports.handler = async (event, context) => {
     const datos = JSON.parse(event.body);
     const { invitados, tipoEncuentro, tipoComida, energiaHost } = datos;
 
-    // Inicialización explícita con el SDK moderno
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return { statusCode: 500, body: JSON.stringify({ error: "Falta la API Key en el servidor" }) };
+    }
 
     const promptSistema = `
       Actúa como el 'Arquitecto de Experiencias Lentas' de la marca Celebra Lento.
@@ -30,11 +30,27 @@ exports.handler = async (event, context) => {
       Devuelve la respuesta en formato de texto claro y estructurado.
     `;
 
-    // Llamada al modelo con la sintaxis correcta para el nuevo SDK
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [promptSistema],
+    // URL oficial y directa de la API de Google Gemini (usando el modelo estable)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    // Petición nativa directa
+    const respuestaApi = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptSistema }] }]
+      })
     });
+
+    if (!respuestaApi.ok) {
+      const errorTexto = await respuestaApi.text();
+      throw new Error(`Error de Google: ${respuestaApi.status} - ${errorTexto}`);
+    }
+
+    const dataJson = await respuestaApi.json();
+    
+    // Extraemos el texto que devuelve Gemini de su estructura estándar
+    const textoGenerado = dataJson.candidates[0].content.parts[0].text;
 
     return {
       statusCode: 200,
@@ -42,11 +58,11 @@ exports.handler = async (event, context) => {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: JSON.stringify({ resultado: response.text }),
+      body: JSON.stringify({ resultado: textoGenerado }),
     };
 
   } catch (error) {
-    console.error("Error en la función:", error);
+    console.error("Error detallado en la función nativa:", error);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
