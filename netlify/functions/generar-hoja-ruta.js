@@ -113,7 +113,7 @@ for(const modelo of modelos){
 
 }
     // Petición nativa directa
-    const respuestaApi =
+   
 async function llamarGemini(url, body, maxIntentos = 5) {
 
   for (let intento = 1; intento <= maxIntentos; intento++) {
