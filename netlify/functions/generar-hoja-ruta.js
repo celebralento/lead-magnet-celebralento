@@ -31,7 +31,7 @@ exports.handler = async (event, context) => {
     `;
 
     // URL oficial y directa de la API de Google Gemini (usando el modelo estable)
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     // Petición nativa directa
     const respuestaApi = await fetch(url, {
       method: "POST",
