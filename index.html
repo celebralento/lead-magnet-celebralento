@@ -67,7 +67,7 @@
         <div id="resultado-container" class="hidden mt-8 pt-8 border-t border-[#EAE3D2]">
             <h2 class="text-xl text-[#8C6239] mb-4">Tu Hoja de Ruta Personalizada</h2>
             <div id="resultado-texto" class="prose max-w-none text-sm text-[#5C5246] whitespace-pre-line leading-relaxed">
-                </div>
+            </div>
         </div>
 
     </div>
@@ -76,16 +76,13 @@
         document.getElementById('formulario-encuentro').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Elementos de la interfaz
             const cargando = document.getElementById('cargando');
             const resultadoContainer = document.getElementById('resultado-container');
             const resultadoTexto = document.getElementById('resultado-texto');
             
-            // Mostrar carga y ocultar resultado anterior
             cargando.classList.remove('hidden');
             resultadoContainer.classList.add('hidden');
 
-            // Capturar datos del formulario
             const datos = {
                 invitados: document.getElementById('invitados').value,
                 tipoEncuentro: document.getElementById('tipoEncuentro').value,
@@ -94,7 +91,6 @@
             };
 
             try {
-                // Llamamos a nuestra Serverless Function de Netlify de forma segura
                 const respuesta = await fetch('/.netlify/functions/generar-hoja-ruta', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -104,16 +100,16 @@
                 const data = await respuesta.json();
                 
                 if (data.resultado) {
-                    // Mostramos el resultado que nos dio Gemini
-                    resultadoTexto.textContent = data.resultado;
+                    // Cambiado a innerHTML para procesar etiquetas <strong> y <br>
+                    resultadoTexto.innerHTML = data.resultado;
                     resultadoContainer.classList.remove('hidden');
                 } else {
-                    resultadoTexto.textContent = "Hubo un problema al generar la respuesta.";
+                    resultadoTexto.innerHTML = "Hubo un problema al generar la respuesta.";
                     resultadoContainer.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Error:", error);
-                resultadoTexto.textContent = "Error de conexión con el servidor.";
+                resultadoTexto.innerHTML = "Error de conexión con el servidor.";
                 resultadoContainer.classList.remove('hidden');
             } finally {
                 cargando.classList.add('hidden');
