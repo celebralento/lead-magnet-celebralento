@@ -73,23 +73,97 @@ exports.handler = async (event, context) => {
     `;
 
     // URL oficial y directa de la API de Google Gemini (usando el modelo estable)
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const modelos = [
+ "gemini-2.5-flash",
+ "gemini-1.5-flash"
+];
+
+let respuestaApi;
+
+for(const modelo of modelos){
+
+ try{
+
+   const url =
+   `https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${apiKey}`;
+
+   respuestaApi =
+   await llamarGemini(
+      url,
+      {
+        contents:[
+         {
+          parts:[
+           {text:promptSistema}
+          ]
+         }
+        ]
+      }
+   );
+
+   break;
+
+ } catch(e){
+
+   console.log(
+      `falló ${modelo}`
+   );
+
+ }
+
+}
     // Petición nativa directa
     const respuestaApi =
-await llamarGemini(
-   url,
-   {
-      contents:[
-         {
-            parts:[
-               {
-                 text:promptSistema
-               }
-            ]
-         }
-      ]
-   }
-);
+async function llamarGemini(url, body, maxIntentos = 5) {
+
+  for (let intento = 1; intento <= maxIntentos; intento++) {
+
+    const respuesta = await fetch(url,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (respuesta.ok){
+      return respuesta;
+    }
+
+    const errorTexto =
+    await respuesta.text();
+
+    console.log(
+      `Intento ${intento}`,
+      respuesta.status
+    );
+
+    // gestisce quota e saturazione server
+    if (
+      (respuesta.status===429 ||
+       respuesta.status===503) &&
+      intento < maxIntentos
+    ){
+
+      const espera =
+      intento * 5000;
+
+      console.log(
+       `Aspetto ${espera}ms`
+      );
+
+      await new Promise(
+         r=>setTimeout(r,espera)
+      );
+
+      continue;
+    }
+
+    throw new Error(
+      `Google ${respuesta.status}: ${errorTexto}`
+    );
+  }
+}
 
     if (!respuestaApi.ok) {
       const errorTexto = await respuestaApi.text();
