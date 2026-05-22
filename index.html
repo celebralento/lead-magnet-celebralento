@@ -109,7 +109,7 @@
             };
 
             try {
-                const respuesta = await fetch('/.netlify/functions/generar-hoja-ruta', {
+                const respuesta = await fetch('/.api/generar-hoja-ruta', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(datos)
