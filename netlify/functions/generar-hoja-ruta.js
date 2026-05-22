@@ -1,10 +1,11 @@
-const fetch = require('node-fetch');
 
-// 1. FUNCIÓN AUXILIAR: Con reintentos rápidos para no agotar los 30s de Netlify
+
+// 1. FUNCIÓN AUXILIAR: Con reintentos rápidos (usando fetch nativo de Node.js)
 async function llamarGemini(url, body, maxIntentos = 3) {
   for (let intento = 1; intento <= maxIntentos; intento++) {
     try {
-      const respuesta = await fetch(url, {
+      // Usamos el fetch nativo global del sistema
+      const respuesta = await globalThis.fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -35,6 +36,7 @@ async function llamarGemini(url, body, maxIntentos = 3) {
   throw new Error("No se pudo conectar con Gemini tras los reintentos");
 }
 
+// 2. HANDLER PRINCIPAL DE NETLIFY (El resto del código se mantiene exactamente igual...)
 // 2. HANDLER PRINCIPAL DE NETLIFY
 exports.handler = async (event, context) => {
   if (event.httpMethod !== "POST") {
