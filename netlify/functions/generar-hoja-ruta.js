@@ -108,10 +108,10 @@ Firmá como: "Flavia · Celebra Lento 🕯️"
 - Para los saltos de línea, usa la etiqueta <br>.
 `;
 
-    // LISTA DE MODELOS VÁLIDOS (Flash como principal, Pro como auxilio)
+    // CORRECCIÓN: Nombres de modelos válidos y reconocidos por la API v1 de Google
     const modelos = [
-      "gemini-1.5-flash",
-      "gemini-1.5-pro"
+      "gemini-1.5-flash-latest",
+      "gemini-1.5-pro-latest"
     ];
 
     let respuestaApi;
