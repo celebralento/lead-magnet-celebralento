@@ -1,43 +1,32 @@
-
-
-// 1. FUNCIÓN AUXILIAR: Con reintentos rápidos (usando fetch nativo de Node.js)
-async function llamarGemini(url, body, maxIntentos = 3) {
+// Volvemos a tu estructura original que sí conectaba con el servidor
+async function llamarGemini(url, body, maxIntentos = 5) {
   for (let intento = 1; intento <= maxIntentos; intento++) {
-    try {
-      // Usamos el fetch nativo global del sistema
-      const respuesta = await globalThis.fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      });
+    const respuesta = await globalThis.fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
 
-      if (respuesta.ok) {
-        return respuesta;
-      }
-
-      const errorTexto = await respuesta.text();
-      console.log(`Intento ${intento} - Status: ${respuesta.status}`);
-
-      // Si el servidor está saturado (429 o 503), esperamos tiempos cortos (1.5s, 3s)
-      if ((respuesta.status === 429 || respuesta.status === 503) && intento < maxIntentos) {
-        const espera = intento * 1500; 
-        await new Promise(r => setTimeout(r, espera));
-        continue;
-      }
-
-      throw new Error(`Google ${respuesta.status}: ${errorTexto}`);
-    } catch (err) {
-      if (intento === maxIntentos) throw err;
-      await new Promise(r => setTimeout(r, 1500)); // Espera corta ante errores de red
+    if (respuesta.ok) {
+      return respuesta;
     }
+
+    const errorTexto = await respuesta.text();
+    console.log(`Intento ${intento}`, respuesta.status);
+
+    if ((respuesta.status === 429 || respuesta.status === 503) && intento < maxIntentos) {
+      const espera = intento * 5000;
+      await new Promise(r => setTimeout(r, espera));
+      continue;
+    }
+
+    throw new Error(`Google ${respuesta.status}: ${errorTexto}`);
   }
-  throw new Error("No se pudo conectar con Gemini tras los reintentos");
+  throw new Error("No se pudo conectar con Gemini");
 }
 
-// 2. HANDLER PRINCIPAL DE NETLIFY (El resto del código se mantiene exactamente igual...)
-// 2. HANDLER PRINCIPAL DE NETLIFY
 exports.handler = async (event, context) => {
   if (event.httpMethod !== "POST") {
     return {
@@ -58,6 +47,7 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Tu nuevo prompt optimizado para un tono práctico, directo y sin rodeos
     const promptSistema = `
 Sos Flavia, la creadora de Celebra Lento.
 
@@ -108,33 +98,27 @@ Firmá como: "Flavia · Celebra Lento 🕯️"
 - Para los saltos de línea, usa la etiqueta <br>.
 `;
 
-    // CORRECCIÓN: Nombres de modelos válidos y reconocidos por la API v1 de Google
-    const modelos = [
-      "gemini-1.5-flash-latest",
-      "gemini-1.5-pro-latest"
-    ];
-
+    // Restauramos el modelo exacto y la URL que te funcionaba ayer
+    const modelos = ["gemini-2.5-flash"];
     let respuestaApi;
 
     for (const modelo of modelos) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${apiKey}`;
-        console.log(`Intentando con modelo: ${modelo}...`);
-
+        
         respuestaApi = await llamarGemini(url, {
           contents: [{ parts: [{ text: promptSistema }] }]
         });
-
-        console.log(`¡Éxito con el modelo!: ${modelo}`);
-        break; // Rompe el bucle de modelos si este funcionó
+        
+        console.log(`modelo usado: ${modelo}`);
+        break;
       } catch (e) {
-        console.log(`Falló el modelo ${modelo}:`, e.message);
-        // Sigue al siguiente modelo del array
+        console.log(`falló ${modelo}`, e.message);
       }
     }
 
     if (!respuestaApi) {
-      throw new Error("Ninguno de los modelos (1.5-flash / 1.5-pro) pudo responder a tiempo.");
+      throw new Error("Ningún modelo respondió");
     }
 
     const dataJson = await respuestaApi.json();
@@ -150,7 +134,7 @@ Firmá como: "Flavia · Celebra Lento 🕯️"
     };
 
   } catch (error) {
-    console.error("Error general en la función:", error);
+    console.error("Error:", error);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
