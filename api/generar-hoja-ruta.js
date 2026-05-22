@@ -1,4 +1,4 @@
-const { globalThis } = require("next/dist/compiled/@edge-runtime/primitives");
+
 
 // Mantenemos tu función original de reintentos intacta
 async function llamarGemini(url, body, maxIntentos = 5) {
