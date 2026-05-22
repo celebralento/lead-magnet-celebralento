@@ -1,7 +1,9 @@
-// Volvemos a tu estructura original que sí conectaba con el servidor
+const { globalThis } = require("next/dist/compiled/@edge-runtime/primitives");
+
+// Mantenemos tu función original de reintentos intacta
 async function llamarGemini(url, body, maxIntentos = 5) {
   for (let intento = 1; intento <= maxIntentos; intento++) {
-    const respuesta = await globalThis.fetch(url, {
+    const respuesta = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -27,27 +29,36 @@ async function llamarGemini(url, body, maxIntentos = 5) {
   throw new Error("No se pudo conectar con Gemini");
 }
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: "Método no permitido"
-    };
+// Cambiamos al formato nativo de Vercel (req, res)
+module.exports = async (req, res) => {
+  // Configuración de cabeceras CORS para Vercel
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  // Manejo de la petición OPTIONS (Preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método no permitido" });
   }
 
   try {
-    const datos = JSON.parse(event.body);
-    const { invitados, tipoEncuentro, tipoComida, energiaHost } = datos;
+    // En Vercel, req.body ya viene parseado automáticamente como objeto
+    const { invitados, tipoEncuentro, tipoComida, energiaHost } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Falta API key" })
-      };
+      return res.status(500).json({ error: "Falta API key" });
     }
 
-    // Tu nuevo prompt optimizado para un tono práctico, directo y sin rodeos
+    // Tu prompt optimizado exacto
     const promptSistema = `
 Sos Flavia, la creadora de Celebra Lento.
 
@@ -85,7 +96,7 @@ ESTRUCTURA DE LA RESPUESTA:
 2. "Tu plan de acción" — qué hacer, en qué orden, qué delegar
 3. "La mesa" — qué poner, cómo organizarla según la comida elegida
 4. "El momento" — un tip para estar presente durante la fiesta,
-   no solo organizando
+    no solo organizando
 5. Una frase de cierre corta
 
 SIN preguntas de conexión profunda — eso es para otro momento.
@@ -98,7 +109,6 @@ Firmá como: "Flavia · Celebra Lento 🕯️"
 - Para los saltos de línea, usa la etiqueta <br>.
 `;
 
-    // Restauramos el modelo exacto y la URL que te funcionaba ayer
     const modelos = ["gemini-2.5-flash"];
     let respuestaApi;
 
@@ -124,21 +134,11 @@ Firmá como: "Flavia · Celebra Lento 🕯️"
     const dataJson = await respuestaApi.json();
     const textoGenerado = dataJson.candidates?.[0]?.content?.parts?.[0]?.text || "Sin respuesta";
 
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
-      body: JSON.stringify({ resultado: textoGenerado })
-    };
+    // Formato de respuesta nativo de Vercel
+    return res.status(200).json({ resultado: textoGenerado });
 
   } catch (error) {
     console.error("Error:", error);
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Error interno", detalle: error.message })
-    };
+    return res.status(500).json({ error: "Error interno", detalle: error.message });
   }
 };
