@@ -1,92 +1,62 @@
-async function llamarGemini(url, body, maxIntentos = 5) {
+const fetch = require('node-fetch');
 
+// 1. FUNCIÓN AUXILIAR: Con reintentos rápidos para no agotar los 30s de Netlify
+async function llamarGemini(url, body, maxIntentos = 3) {
   for (let intento = 1; intento <= maxIntentos; intento++) {
+    try {
+      const respuesta = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
 
-    const respuesta = await fetch(url,{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body: JSON.stringify(body)
-    });
+      if (respuesta.ok) {
+        return respuesta;
+      }
 
-    if (respuesta.ok){
-      return respuesta;
+      const errorTexto = await respuesta.text();
+      console.log(`Intento ${intento} - Status: ${respuesta.status}`);
+
+      // Si el servidor está saturado (429 o 503), esperamos tiempos cortos (1.5s, 3s)
+      if ((respuesta.status === 429 || respuesta.status === 503) && intento < maxIntentos) {
+        const espera = intento * 1500; 
+        await new Promise(r => setTimeout(r, espera));
+        continue;
+      }
+
+      throw new Error(`Google ${respuesta.status}: ${errorTexto}`);
+    } catch (err) {
+      if (intento === maxIntentos) throw err;
+      await new Promise(r => setTimeout(r, 1500)); // Espera corta ante errores de red
     }
-
-    const errorTexto =
-    await respuesta.text();
-
-    console.log(
-      `Intento ${intento}`,
-      respuesta.status
-    );
-
-    if(
-      (respuesta.status===429 ||
-       respuesta.status===503) &&
-      intento < maxIntentos
-    ){
-
-      const espera =
-      intento * 5000;
-
-      await new Promise(
-        r=>setTimeout(r,espera)
-      );
-
-      continue;
-    }
-
-    throw new Error(
-      `Google ${respuesta.status}: ${errorTexto}`
-    );
   }
-
-  throw new Error(
-    "No se pudo conectar con Gemini"
-  );
+  throw new Error("No se pudo conectar con Gemini tras los reintentos");
 }
 
-
+// 2. HANDLER PRINCIPAL DE NETLIFY
 exports.handler = async (event, context) => {
-
-  if(event.httpMethod!=="POST"){
-
-    return{
-      statusCode:405,
-      body:"Método no permitido"
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      body: "Método no permitido"
     };
-
   }
 
-  try{
+  try {
+    const datos = JSON.parse(event.body);
+    const { invitados, tipoEncuentro, tipoComida, energiaHost } = datos;
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    const datos=
-    JSON.parse(event.body);
-
-    const {
-      invitados,
-      tipoEncuentro,
-      tipoComida,
-      energiaHost
-    }=datos;
-
-    const apiKey=
-    process.env.GEMINI_API_KEY;
-
-    if(!apiKey){
-
-      return{
-        statusCode:500,
-        body:JSON.stringify({
-          error:"Falta API key"
-        })
+    if (!apiKey) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Falta API key" })
       };
-
     }
 
-   const promptSistema = `
+    const promptSistema = `
 Sos Flavia, la creadora de Celebra Lento.
 
 Una vez organicé el cumpleaños de mi hija y quedé exhausta. 
@@ -136,113 +106,53 @@ Firmá como: "Flavia · Celebra Lento 🕯️"
 - Para los saltos de línea, usa la etiqueta <br>.
 `;
 
-    const modelos=[
-      "gemini-2.5-flash"
+    // LISTA DE MODELOS VÁLIDOS (Flash como principal, Pro como auxilio)
+    const modelos = [
+      "gemini-1.5-flash",
+      "gemini-1.5-pro"
     ];
 
     let respuestaApi;
 
-    for(const modelo of modelos){
+    for (const modelo of modelos) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${apiKey}`;
+        console.log(`Intentando con modelo: ${modelo}...`);
 
-      try{
+        respuestaApi = await llamarGemini(url, {
+          contents: [{ parts: [{ text: promptSistema }] }]
+        });
 
-        const url=
-`https://generativelanguage.googleapis.com/v1/models/${modelo}:generateContent?key=${apiKey}`;
-
-        respuestaApi=
-        await llamarGemini(
-          url,
-          {
-            contents:[
-              {
-                parts:[
-                  {
-                    text:promptSistema
-                  }
-                ]
-              }
-            ]
-          }
-        );
-
-        console.log(
-          `modelo usado: ${modelo}`
-        );
-
-        break;
-
+        console.log(`¡Éxito con el modelo!: ${modelo}`);
+        break; // Rompe el bucle de modelos si este funcionó
+      } catch (e) {
+        console.log(`Falló el modelo ${modelo}:`, e.message);
+        // Sigue al siguiente modelo del array
       }
-
-      catch(e){
-
-        console.log(
-          `falló ${modelo}`,
-          e.message
-        );
-
-      }
-
     }
 
-    if(!respuestaApi){
-
-      throw new Error(
-        "Ningún modelo respondió"
-      );
-
+    if (!respuestaApi) {
+      throw new Error("Ninguno de los modelos (1.5-flash / 1.5-pro) pudo responder a tiempo.");
     }
 
-    const dataJson=
-    await respuestaApi.json();
+    const dataJson = await respuestaApi.json();
+    const textoGenerado = dataJson.candidates?.[0]?.content?.parts?.[0]?.text || "Sin respuesta";
 
-    const textoGenerado=
-      dataJson.candidates?.[0]
-      ?.content?.parts?.[0]
-      ?.text ||
-      "Sin respuesta";
-
-    return{
-
-      statusCode:200,
-
-      headers:{
-        "Content-Type":"application/json",
-        "Access-Control-Allow-Origin":"*"
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
       },
-
-      body:JSON.stringify({
-        resultado:textoGenerado
-      })
-
+      body: JSON.stringify({ resultado: textoGenerado })
     };
 
-  }
-
-  catch(error){
-
-    console.error(
-      "Error:",
-      error
-    );
-
-    return{
-
-      statusCode:500,
-
-      headers:{
-        "Content-Type":"application/json"
-      },
-
-      body:JSON.stringify({
-
-        error:"Error interno",
-
-        detalle:error.message
-
-      })
-
+  } catch (error) {
+    console.error("Error general en la función:", error);
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Error interno", detalle: error.message })
     };
-
   }
-
 };
