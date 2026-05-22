@@ -60,9 +60,41 @@
             </button>
         </form>
 
-        <div id="cargando" class="hidden text-center py-8 text-[#7A6F62] italic text-sm">
-            Tejiendo tu experiencia lenta... un momento.
-        </div>
+       <!-- Contenedor de Carga con Vela Animada -->
+<div id="cargando" class="hidden flex flex-col items-center justify-center py-8 space-y-4">
+    <!-- Icono de Vela SVG -->
+    <svg class="w-12 h-12 text-[#8C6239]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Cuerpo de la vela -->
+        <path d="M9 21h6v-9H9v9z" fill="#FCFBF9" />
+        <!-- Pabilo -->
+        <line x1="12" y1="12" x2="12" y2="9" />
+        <!-- Llama de la vela con clase de animación personalizada -->
+        <path class="llama-animada" d="M12 3c-1.2 2.5-2.5 3.5-2.5 4.5A2.5 2.5 0 0 0 14.5 7.5c0-1-1.3-2-2.5-4.5z" fill="#8C6239" />
+    </svg>
+    <p class="text-center text-sm text-[#7A6F62] italic animate-pulse">Tejiendo tu experiencia lenta... un momento.</p>
+
+    <!-- Estilos CSS específicos para el parpadeo de la llama -->
+    <style>
+        @keyframes parpadeo {
+            0%, 100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 0.9;
+            }
+            50% {
+                transform: scale(1.08) rotate(-2deg);
+                opacity: 1;
+            }
+            75% {
+                transform: scale(0.95) rotate(3deg);
+                opacity: 0.85;
+            }
+        }
+        .llama-animada {
+            transform-origin: 12px 8px; /* Punto de anclaje en la base de la llama */
+            animation: parpadeo 1.2s ease-in-out infinite;
+        }
+    </style>
+</div>
 
         <div id="resultado-container" class="hidden mt-8 pt-8 border-t border-[#EAE3D2]">
             <h2 class="text-xl text-[#8C6239] mb-4">Tu Hoja de Ruta Personalizada</h2>
@@ -81,6 +113,7 @@
             const resultadoTexto = document.getElementById('resultado-texto');
             
             cargando.classList.remove('hidden');
+            cargando.classList.add('flex');
             resultadoContainer.classList.add('hidden');
 
             const datos = {
@@ -113,6 +146,7 @@
                 resultadoContainer.classList.remove('hidden');
             } finally {
                 cargando.classList.add('hidden');
+                cargando.classList.remove('flex');
             }
         });
     </script>
